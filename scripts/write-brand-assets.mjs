@@ -28,11 +28,16 @@ for (const [key, val] of Object.entries(assets)) {
 }
 for (const [file, info] of Object.entries(parts)) {
   const ordered = [];
+  let missing = false;
   for (let i = 0; i < info.total; i++) {
-    if (info.chunks[i] == null) throw new Error(`Missing part ${i} of ${file}`);
+    if (info.chunks[i] == null) {
+      console.warn(`Skipping ${file}: missing part ${i}/${info.total}`);
+      missing = true;
+      break;
+    }
     ordered.push(info.chunks[i]);
   }
-  whole[file] = ordered.join('');
+  if (!missing) whole[file] = ordered.join('');
 }
 
 if (!Object.keys(whole).length) {
