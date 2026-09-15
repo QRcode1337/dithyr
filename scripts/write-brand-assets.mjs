@@ -12,11 +12,34 @@ for (const name of readdirSync(scripts)) {
   if (!name.startsWith('brand-assets') || !name.endsWith('.b64.json')) continue;
   Object.assign(assets, JSON.parse(readFileSync(join(scripts, name), 'utf8')));
 }
-if (!Object.keys(assets).length) {
+
+// Reassemble split parts: "file.png#part0of3" -> file.png
+const parts = {};
+const whole = {};
+for (const [key, val] of Object.entries(assets)) {
+  const m = /^(.*)#part(\d+)of(\d+)$/.exec(key);
+  if (m) {
+    const [, file, idx, total] = m;
+    if (!parts[file]) parts[file] = { total: Number(total), chunks: {} };
+    parts[file].chunks[Number(idx)] = val;
+  } else {
+    whole[key] = val;
+  }
+}
+for (const [file, info] of Object.entries(parts)) {
+  const ordered = [];
+  for (let i = 0; i < info.total; i++) {
+    if (info.chunks[i] == null) throw new Error(`Missing part ${i} of ${file}`);
+    ordered.push(info.chunks[i]);
+  }
+  whole[file] = ordered.join('');
+}
+
+if (!Object.keys(whole).length) {
   console.warn('No brand-assets*.b64.json found — skipping');
   process.exit(0);
 }
-for (const [name, b64] of Object.entries(assets)) {
+for (const [name, b64] of Object.entries(whole)) {
   const buf = Buffer.from(b64, 'base64');
   const out = name.includes('/') ? join(root, name) : join(pub, name);
   mkdirSync(dirname(out), { recursive: true });
