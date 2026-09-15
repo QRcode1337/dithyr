@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 196" role="img" aria-label="Dithyr mark">
+  <rect width="160" height="196" fill="#000"/>
+  <g fill="#9d81e1">
+    <rect x="22" y="24" width="116" height="26" rx="3"/>
+    <path d="M48 62h28l44 44-44 44H48l44-44z"/>
+    <path d="M30 156l16-36h20L50 156z"/>
+    <path d="M70 156l16-36h20L90 156z"/>
+    <path d="M110 156l16-36h20l-16 36z"/>
+    <path d="M28 164h36l-5 16H33z"/>
+    <path d="M68 164h36l-5 16H73z"/>
+    <path d="M108 164h36l-5 16H113z"/>
+  </g>
+</svg>
