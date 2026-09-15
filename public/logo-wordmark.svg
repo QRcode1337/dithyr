@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 40" role="img" aria-label="dithyr">
+  <rect width="168" height="40" fill="#000"/>
+  <g fill="#9d81e1">
+    <path d="M6 6h4v28H6zm4 8h10v4H10zm10 4h4v12h-4zm-10 12h10v4H10z"/>
+    <path d="M28 6h4v4h-4zm0 8h4v20h-4z"/>
+    <path d="M38 10h4v24h-4zm-4 4h12v4H34zm8 16h6v4h-6z"/>
+    <path d="M54 6h4v28h-4zm4 8h10v4H58zm10 4h4v16h-4z"/>
+    <path d="M78 14h4v12h-4zm12 0h4v12h-4zm4 12h-12v4h4v8h-4v4h8v-4h-4v-8h4z"/>
+    <path d="M102 14h4v20h-4zm4 0h10v4h-10zm10 4h4v6h-4z"/>
+  </g>
+</svg>
