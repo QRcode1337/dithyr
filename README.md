@@ -69,6 +69,16 @@ Built-ins: Black & White, CGA, Game Boy, Commodore 64, Pico-8, Apple II, plus ar
 - Very large images are capped at 1600px on the long edge for performance.
 - Blue-noise is a multi-octave hash approximation (not a precomputed void-and-cluster texture).
 
+
+## Undo / redo
+
+Document settings (algorithm, palette, scale, threshold, effect stacks) support undo and redo:
+
+- **Buttons**: Undo / Redo in the top bar
+- **Shortcuts**: `Ctrl/Cmd+Z` undo · `Ctrl/Cmd+Shift+Z` or `Ctrl/Cmd+Y` redo
+
+Continuous slider drags are debounced (~300ms) so history stays usable; discrete picks commit immediately.
+
 ## Stack
 
 Vite · React · TypeScript · Web Workers · Canvas
