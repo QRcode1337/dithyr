@@ -13,6 +13,10 @@ interface TopBarProps {
   exportProgress?: number;
 }
 
+function Kbd({ children }: { children: string }) {
+  return <kbd className="kbd">{children}</kbd>;
+}
+
 export function TopBar({
   onOpen,
   onExport,
@@ -27,56 +31,103 @@ export function TopBar({
   exporting,
   exportProgress = 0,
 }: TopBarProps) {
+  const isMac =
+    typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+  const mod = isMac ? '⌘' : 'Ctrl';
+
   return (
     <header className="topbar">
-      <div className="logo">
-        <div className="logo-mark" />
-        <span>DITHYR</span>
+      <div className="brand">
+        <img
+          className="brand-mark"
+          src="/logo-mark.svg"
+          alt=""
+          width={28}
+          height={28}
+          draggable={false}
+        />
+        <img
+          className="brand-wordmark"
+          src="/logo-wordmark.svg"
+          alt="dithyr"
+          height={20}
+          width={92}
+          draggable={false}
+        />
+        <span className="brand-tagline">creative dithering studio</span>
       </div>
-      <span className="status">
-        {fileName ? fileName : 'untitled'}
-        {processing ? ' · processing…' : ''}
-      </span>
+
+      <div className={`status-pill${processing || exporting ? ' is-busy' : ''}`}>
+        <span className="status-dot" aria-hidden />
+        <span className="status-name" title={fileName || 'untitled'}>
+          {fileName || 'untitled'}
+        </span>
+        {processing && <span className="status-busy">rendering</span>}
+        {exporting && (
+          <span className="status-busy">export {Math.round(exportProgress * 100)}%</span>
+        )}
+      </div>
+
       <div className="topbar-actions">
-        <button
-          type="button"
-          className="btn"
-          onClick={onUndo}
-          disabled={!canUndo}
-          title="Undo (Ctrl/Cmd+Z)"
-        >
-          Undo
-        </button>
-        <button
-          type="button"
-          className="btn"
-          onClick={onRedo}
-          disabled={!canRedo}
-          title="Redo (Ctrl/Cmd+Shift+Z)"
-        >
-          Redo
-        </button>
-        <button type="button" className="btn" onClick={onOpen}>
-          Open
-        </button>
-        <button type="button" className="btn" onClick={onToggleCompare}>
-          Compare
-        </button>
-        {onExportVideo && (
+        <div className="btn-group" role="group" aria-label="History">
+          <button
+            type="button"
+            className="btn btn-icon"
+            onClick={onUndo}
+            disabled={!canUndo}
+            title={`Undo (${mod}+Z)`}
+          >
+            <span aria-hidden>↶</span>
+            <span className="btn-label">Undo</span>
+            <Kbd>{`${mod}+Z`}</Kbd>
+          </button>
+          <button
+            type="button"
+            className="btn btn-icon"
+            onClick={onRedo}
+            disabled={!canRedo}
+            title={`Redo (${mod}+Shift+Z)`}
+          >
+            <span aria-hidden>↷</span>
+            <span className="btn-label">Redo</span>
+            <Kbd>{`${mod}+⇧Z`}</Kbd>
+          </button>
+        </div>
+
+        <div className="btn-group">
+          <button type="button" className="btn" onClick={onOpen} title="Open image, GIF, or video">
+            Open
+          </button>
           <button
             type="button"
             className="btn"
-            onClick={onExportVideo}
-            disabled={exporting}
+            onClick={onToggleCompare}
+            title="Toggle original vs dithered"
           >
-            {exporting
-              ? `Exporting ${Math.round(exportProgress * 100)}%`
-              : 'Export Video'}
+            Compare
           </button>
-        )}
-        <button type="button" className="btn btn-primary" onClick={onExport}>
-          Export PNG
-        </button>
+          {onExportVideo && (
+            <button
+              type="button"
+              className="btn"
+              onClick={onExportVideo}
+              disabled={exporting}
+              title="Export processed video as WebM"
+            >
+              {exporting
+                ? `Exporting ${Math.round(exportProgress * 100)}%`
+                : 'Export Video'}
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={onExport}
+            title="Export current preview as PNG"
+          >
+            Export PNG
+          </button>
+        </div>
       </div>
     </header>
   );
