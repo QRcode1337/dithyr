@@ -6,6 +6,12 @@ interface VideoTimelineProps {
   onTogglePlay: () => void;
 }
 
+function fmt(t: number) {
+  const m = Math.floor(t / 60);
+  const s = Math.floor(t % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 export function VideoTimeline({
   duration,
   currentTime,
@@ -13,22 +19,22 @@ export function VideoTimeline({
   onSeek,
   onTogglePlay,
 }: VideoTimelineProps) {
-  if (!duration || duration <= 0) return null;
   return (
     <div className="timeline">
-      <button type="button" className="btn btn-ghost" onClick={onTogglePlay}>
+      <button type="button" className="btn btn-sm" onClick={onTogglePlay}>
         {playing ? 'Pause' : 'Play'}
       </button>
       <input
         type="range"
         min={0}
-        max={duration}
+        max={duration || 0}
         step={0.01}
         value={currentTime}
         onChange={(e) => onSeek(Number(e.target.value))}
+        aria-label="Scrub timeline"
       />
-      <span className="status">
-        {currentTime.toFixed(2)}s / {duration.toFixed(2)}s
+      <span className="timeline-time">
+        {fmt(currentTime)} / {fmt(duration || 0)}
       </span>
     </div>
   );
