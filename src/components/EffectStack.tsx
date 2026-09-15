@@ -35,48 +35,88 @@ export function EffectStack({ stage, effects, onChange }: EffectStackProps) {
   };
 
   return (
-    <div className="section">
-      <div className="section-header">
-        {stage === 'pre' ? 'Pre-effects' : 'Post-effects'}
+    <section className="section">
+      <div className="section-header sticky">
+        <span>{stage === 'pre' ? 'Pre-effects' : 'Post-effects'}</span>
+        <span className="chip">{effects.length}</span>
       </div>
       <div className="section-body">
+        {effects.length === 0 && (
+          <p className="hint-muted">No effects — add one below to shape the look.</p>
+        )}
         {effects.map((e, i) => {
           const meta = EFFECT_META.find((m) => m.type === e.type)!;
           return (
-            <div key={e.id} className="effect-item">
+            <div
+              key={e.id}
+              className={`effect-item${e.enabled ? '' : ' is-disabled'}`}
+            >
               <div className="effect-item-header">
+                <span className="drag-handle" title="Reorder" aria-hidden>
+                  ⠿
+                </span>
                 <input
                   type="checkbox"
                   checked={e.enabled}
                   onChange={(ev) => update(e.id, { enabled: ev.target.checked })}
+                  aria-label={`Enable ${meta.name}`}
                 />
                 <strong>{meta.name}</strong>
-                <button type="button" className="icon-btn" onClick={() => move(i, -1)} title="Up">
-                  ↑
-                </button>
-                <button type="button" className="icon-btn" onClick={() => move(i, 1)} title="Down">
-                  ↓
-                </button>
-                <button type="button" className="icon-btn" onClick={() => remove(e.id)} title="Remove">
-                  ✕
-                </button>
+                <span className={`badge${e.enabled ? ' badge-on' : ' badge-off'}`}>
+                  {e.enabled ? 'on' : 'off'}
+                </span>
+                <div className="effect-actions">
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={() => move(i, -1)}
+                    title="Move up"
+                    disabled={i === 0}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={() => move(i, 1)}
+                    title="Move down"
+                    disabled={i === effects.length - 1}
+                  >
+                    ↓
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-btn danger"
+                    onClick={() => remove(e.id)}
+                    title="Remove"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
-              {meta.params.map((p) => (
-                <label key={p.key} className="field">
-                  <span>
-                    {p.label}
-                    <span>{e.params[p.key] ?? p.min}</span>
-                  </span>
-                  <input
-                    type="range"
-                    min={p.min}
-                    max={p.max}
-                    step={p.step}
-                    value={e.params[p.key] ?? p.min}
-                    onChange={(ev) => updateParam(e.id, p.key, Number(ev.target.value))}
-                  />
-                </label>
-              ))}
+              {e.enabled &&
+                meta.params.map((p) => (
+                  <label key={p.key} className="field">
+                    <span>
+                      {p.label}
+                      <span className="field-value">
+                        {Number(e.params[p.key] ?? p.min).toFixed(
+                          p.step < 1 ? 2 : 0
+                        )}
+                      </span>
+                    </span>
+                    <input
+                      type="range"
+                      min={p.min}
+                      max={p.max}
+                      step={p.step}
+                      value={e.params[p.key] ?? p.min}
+                      onChange={(ev) =>
+                        updateParam(e.id, p.key, Number(ev.target.value))
+                      }
+                    />
+                  </label>
+                ))}
             </div>
           );
         })}
@@ -102,6 +142,6 @@ export function EffectStack({ stage, effects, onChange }: EffectStackProps) {
           </select>
         </label>
       </div>
-    </div>
+    </section>
   );
 }

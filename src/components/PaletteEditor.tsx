@@ -48,8 +48,11 @@ export function PaletteEditor({
   };
 
   return (
-    <div className="section">
-      <div className="section-header">Palette</div>
+    <section className="section">
+      <div className="section-header sticky">
+        <span>Palette</span>
+        <span className="chip">{activeColors.length} swatches</span>
+      </div>
       <div className="section-body">
         <label className="field">
           <span>Built-in</span>
@@ -91,35 +94,48 @@ export function PaletteEditor({
           ))}
           <button
             type="button"
-            className="btn"
-            style={{ padding: '4px 8px' }}
-            onClick={() => ensureCustom([...activeColors, [128, 128, 128]])}
+            className="swatch swatch-add"
+            onClick={() => ensureCustom([...activeColors, [157, 129, 225]])}
+            title="Add swatch"
           >
             +
           </button>
         </div>
 
         <div className="row">
-          <button type="button" className="btn" onClick={() => onExtract('median-cut')}>
-            Extract (median-cut)
+          <button
+            type="button"
+            className="btn btn-block"
+            onClick={() => onExtract('median-cut')}
+            title="Extract 8 colors via median-cut"
+          >
+            Extract · median-cut
           </button>
-          <button type="button" className="btn" onClick={() => onExtract('k-means')}>
-            Extract (k-means)
+          <button
+            type="button"
+            className="btn btn-block"
+            onClick={() => onExtract('k-means')}
+            title="Extract 8 colors via k-means"
+          >
+            Extract · k-means
           </button>
         </div>
         <div className="row">
           <button
             type="button"
-            className="btn"
+            className="btn btn-block"
             onClick={() =>
-              downloadJson(exportPaletteJson({ ...working, colors: activeColors }), 'palette.json')
+              downloadJson(
+                exportPaletteJson({ ...working, colors: activeColors }),
+                'palette.json'
+              )
             }
           >
             Export JSON
           </button>
           <button
             type="button"
-            className="btn"
+            className="btn btn-block"
             onClick={() => {
               const input = document.createElement('input');
               input.type = 'file';
@@ -137,6 +153,6 @@ export function PaletteEditor({
           </button>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
