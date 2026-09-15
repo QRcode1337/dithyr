@@ -1,7 +1,6 @@
+import { useMemo, useState } from 'react';
 import type { EffectInstance, Palette, RGB } from '../types';
 import { ALGORITHMS } from '../dither/registry';
-import { exportEffectPreset, importEffectPreset } from '../effects/effects';
-import { downloadJson } from '../utils/export';
 import { PaletteEditor } from './PaletteEditor';
 import { EffectStack } from './EffectStack';
 
@@ -33,126 +32,151 @@ const CATEGORIES = [
 ] as const;
 
 export function Inspector(props: InspectorProps) {
+  const [query, setQuery] = useState('');
+  const [catFilter, setCatFilter] = useState<string>('all');
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return ALGORITHMS.filter((a) => {
+      if (catFilter !== 'all' && a.category !== catFilter) return false;
+      if (!q) return true;
+      return (
+        a.name.toLowerCase().includes(q) ||
+        a.id.toLowerCase().includes(q) ||
+        (a.description?.toLowerCase().includes(q) ?? false)
+      );
+    });
+  }, [query, catFilter]);
+
+  const grouped = useMemo(() => {
+    return CATEGORIES.map((cat) => ({
+      ...cat,
+      items: filtered.filter((a) => a.category === cat.id),
+    })).filter((g) => g.items.length > 0);
+  }, [filtered]);
+
   return (
     <aside className="inspector">
-      <div className="section">
-        <div className="section-header">
-          Algorithm <span className="chip">{props.algorithmCount}</span>
-        </div>
-        <div className="section-body">
-          <label className="field">
-            <span>Dither method</span>
-            <select
-              value={props.algorithmId}
-              onChange={(e) => props.onAlgorithm(e.target.value)}
-            >
-              {CATEGORIES.map((cat) => (
-                <optgroup key={cat.id} label={cat.label}>
-                  {ALGORITHMS.filter((a) => a.category === cat.id).map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span>
-              Pixel scale
-              <span>{props.scale}×</span>
-            </span>
-            <input
-              type="range"
-              min={1}
-              max={16}
-              step={1}
-              value={props.scale}
-              onChange={(e) => props.onScale(Number(e.target.value))}
-            />
-          </label>
-          <label className="field">
-            <span>
-              Threshold
-              <span>{props.threshold.toFixed(2)}</span>
-            </span>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={props.threshold}
-              onChange={(e) => props.onThreshold(Number(e.target.value))}
-            />
-          </label>
-          <p className="status" style={{ margin: 0 }}>
-            Scale downsamples before dither, then nearest-upsamples — resolution stays, grain grows.
-          </p>
-        </div>
-      </div>
-
-      <PaletteEditor
-        paletteId={props.paletteId}
-        customPalette={props.customPalette}
-        activeColors={props.activeColors}
-        onSelectBuiltin={props.onSelectBuiltin}
-        onCustomChange={props.onCustomChange}
-        onExtract={props.onExtract}
-      />
-
-      <div className="section">
-        <div className="section-header">Effect preset</div>
-        <div className="section-body">
-          <div className="row">
-            <button
-              type="button"
-              className="btn"
-              onClick={() =>
-                downloadJson(
-                  exportEffectPreset(props.preEffects, props.postEffects),
-                  'effect-preset.json'
-                )
-              }
-            >
-              Export Preset
-            </button>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => {
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = 'application/json,.json';
-                input.onchange = async () => {
-                  const file = input.files?.[0];
-                  if (!file) return;
-                  try {
-                    const preset = importEffectPreset(await file.text());
-                    props.onPreEffects(preset.pre);
-                    props.onPostEffects(preset.post);
-                  } catch (err) {
-                    alert(err instanceof Error ? err.message : 'Invalid effect preset');
-                  }
-                };
-                input.click();
-              }}
-            >
-              Import Preset
-            </button>
+      <div className="inspector-scroll">
+        <section className="section">
+          <div className="section-header sticky">
+            <span>Algorithm</span>
+            <span className="chip">{props.algorithmCount}</span>
           </div>
-        </div>
-      </div>
+          <div className="section-body">
+            <div className="algo-toolbar">
+              <input
+                className="search-input"
+                type="search"
+                placeholder="Search algorithms…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label="Search algorithms"
+              />
+              <div className="seg-tabs" role="tablist" aria-label="Algorithm category">
+                <button
+                  type="button"
+                  className={`seg-tab${catFilter === 'all' ? ' is-active' : ''}`}
+                  onClick={() => setCatFilter('all')}
+                >
+                  All
+                </button>
+                {CATEGORIES.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`seg-tab${catFilter === c.id ? ' is-active' : ''}`}
+                    onClick={() => setCatFilter(c.id)}
+                    title={c.label}
+                  >
+                    {c.label.split(' ')[0]}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-      <EffectStack
-        stage="pre"
-        effects={props.preEffects}
-        onChange={props.onPreEffects}
-      />
-      <EffectStack
-        stage="post"
-        effects={props.postEffects}
-        onChange={props.onPostEffects}
-      />
+            <label className="field">
+              <span>Dither method</span>
+              <select
+                value={props.algorithmId}
+                onChange={(e) => props.onAlgorithm(e.target.value)}
+              >
+                {grouped.map((cat) => (
+                  <optgroup key={cat.id} label={cat.label}>
+                    {cat.items.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </label>
+            {filtered.length === 0 && (
+              <p className="hint-muted">No algorithms match “{query}”.</p>
+            )}
+          </div>
+        </section>
+
+        <section className="section">
+          <div className="section-header sticky">
+            <span>Scale &amp; threshold</span>
+          </div>
+          <div className="section-body">
+            <label className="field">
+              <span>
+                Pixel scale
+                <span className="field-value">{props.scale}×</span>
+              </span>
+              <input
+                type="range"
+                min={1}
+                max={16}
+                step={1}
+                value={props.scale}
+                onChange={(e) => props.onScale(Number(e.target.value))}
+              />
+            </label>
+            <label className="field">
+              <span>
+                Threshold
+                <span className="field-value">{props.threshold.toFixed(2)}</span>
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={props.threshold}
+                onChange={(e) => props.onThreshold(Number(e.target.value))}
+              />
+            </label>
+            <p className="hint-muted">
+              Scale downsamples before dither, then nearest-upsamples — resolution stays, grain grows.
+            </p>
+          </div>
+        </section>
+
+        <PaletteEditor
+          paletteId={props.paletteId}
+          customPalette={props.customPalette}
+          activeColors={props.activeColors}
+          onSelectBuiltin={props.onSelectBuiltin}
+          onCustomChange={props.onCustomChange}
+          onExtract={props.onExtract}
+        />
+
+        <EffectStack
+          stage="pre"
+          effects={props.preEffects}
+          onChange={props.onPreEffects}
+        />
+        <EffectStack
+          stage="post"
+          effects={props.postEffects}
+          onChange={props.onPostEffects}
+        />
+      </div>
     </aside>
   );
 }
