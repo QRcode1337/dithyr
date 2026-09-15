@@ -1,5 +1,7 @@
 import type { EffectInstance, Palette, RGB } from '../types';
 import { ALGORITHMS } from '../dither/registry';
+import { exportEffectPreset, importEffectPreset } from '../effects/effects';
+import { downloadJson } from '../utils/export';
 import { PaletteEditor } from './PaletteEditor';
 import { EffectStack } from './EffectStack';
 
@@ -97,6 +99,49 @@ export function Inspector(props: InspectorProps) {
         onCustomChange={props.onCustomChange}
         onExtract={props.onExtract}
       />
+
+      <div className="section">
+        <div className="section-header">Effect preset</div>
+        <div className="section-body">
+          <div className="row">
+            <button
+              type="button"
+              className="btn"
+              onClick={() =>
+                downloadJson(
+                  exportEffectPreset(props.preEffects, props.postEffects),
+                  'effect-preset.json'
+                )
+              }
+            >
+              Export Preset
+            </button>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'application/json,.json';
+                input.onchange = async () => {
+                  const file = input.files?.[0];
+                  if (!file) return;
+                  try {
+                    const preset = importEffectPreset(await file.text());
+                    props.onPreEffects(preset.pre);
+                    props.onPostEffects(preset.post);
+                  } catch (err) {
+                    alert(err instanceof Error ? err.message : 'Invalid effect preset');
+                  }
+                };
+                input.click();
+              }}
+            >
+              Import Preset
+            </button>
+          </div>
+        </div>
+      </div>
 
       <EffectStack
         stage="pre"

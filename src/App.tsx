@@ -11,7 +11,7 @@ import {
 } from './dither/palettes';
 import { processAsync } from './pipeline/workerClient';
 import { createSampleImage } from './utils/sampleImage';
-import { downloadImageData } from './utils/export';
+import { downloadImageData, exportVideo } from './utils/export';
 import { useDocHistory, type DocSnapshot } from './hooks/useDocHistory';
 import type { EffectInstance, LoadedMedia, Palette, RGB } from './types';
 
@@ -52,9 +52,14 @@ export default function App() {
   } = doc;
 
   const [playing, setPlaying] = useState(false);
+  const [compareMode, setCompareMode] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const reqRef = useRef(0);
   const videoRaf = useRef<number>(0);
+  const processingRef = useRef(false);
+  const pendingVideoFrameRef = useRef<ImageData | null>(null);
 
   const activeColors: RGB[] = useMemo(() => {
     if (customPalette) return customPalette.colors;
@@ -77,6 +82,7 @@ export default function App() {
   const runPipeline = useCallback(
     async (frame: ImageData) => {
       const id = ++reqRef.current;
+      processingRef.current = true;
       setProcessing(true);
       try {
         const result = await processAsync({
@@ -95,7 +101,15 @@ export default function App() {
       } catch (err) {
         console.error(err);
       } finally {
-        if (id === reqRef.current) setProcessing(false);
+        if (id === reqRef.current) {
+          processingRef.current = false;
+          setProcessing(false);
+          const pendingFrame = pendingVideoFrameRef.current;
+          if (pendingFrame) {
+            pendingVideoFrameRef.current = null;
+            setSourceFrame(pendingFrame);
+          }
+        }
       }
     },
     [algorithmId, activeColors, scale, threshold, preEffects, postEffects]
@@ -150,6 +164,37 @@ export default function App() {
     return ctx.getImageData(0, 0, canvas.width, canvas.height);
   }, []);
 
+  const seekVideoFrame = useCallback((video: HTMLVideoElement, time: number) => {
+    return new Promise<void>((resolve, reject) => {
+      if (Math.abs(video.currentTime - time) < 0.001) {
+        requestAnimationFrame(() => resolve());
+        return;
+      }
+
+      const cleanup = () => {
+        window.clearTimeout(timeout);
+        video.removeEventListener('seeked', done);
+        video.removeEventListener('error', fail);
+      };
+      const done = () => {
+        cleanup();
+        resolve();
+      };
+      const fail = () => {
+        cleanup();
+        reject(new Error('Failed to seek video'));
+      };
+      const timeout = window.setTimeout(() => {
+        cleanup();
+        reject(new Error('Timed out seeking video'));
+      }, 5000);
+
+      video.addEventListener('seeked', done);
+      video.addEventListener('error', fail);
+      video.currentTime = time;
+    });
+  }, []);
+
   // Video playback loop — update source frame
   useEffect(() => {
     if (!media?.videoEl || !playing) {
@@ -162,17 +207,32 @@ export default function App() {
         setPlaying(false);
         return;
       }
-      const frame = grabVideoFrame(video);
-      setSourceFrame(frame);
-      setMedia((m) =>
-        m
-          ? {
-              ...m,
-              currentTime: video.currentTime,
-              imageData: frame,
-            }
-          : m
-      );
+      if (!processingRef.current) {
+        const frame = grabVideoFrame(video);
+        pendingVideoFrameRef.current = null;
+        setSourceFrame(frame);
+        setMedia((m) =>
+          m
+            ? {
+                ...m,
+                currentTime: video.currentTime,
+                imageData: frame,
+              }
+            : m
+        );
+      } else {
+        const frame = grabVideoFrame(video);
+        pendingVideoFrameRef.current = frame;
+        setMedia((m) =>
+          m
+            ? {
+                ...m,
+                currentTime: video.currentTime,
+                imageData: frame,
+              }
+            : m
+        );
+      }
       videoRaf.current = requestAnimationFrame(tick);
     };
     videoRaf.current = requestAnimationFrame(tick);
@@ -192,11 +252,7 @@ export default function App() {
         video.onloadeddata = () => resolve();
         video.onerror = () => reject(new Error('Failed to load media'));
       });
-      video.currentTime = 0;
-      await new Promise<void>((r) => {
-        video.onseeked = () => r();
-        setTimeout(() => r(), 100);
-      });
+      await seekVideoFrame(video, 0);
       const frame = grabVideoFrame(video);
       setSourceFrame(frame);
       setMedia({
@@ -272,6 +328,36 @@ export default function App() {
     commit((d) => ({ ...d, ...partial }));
   };
 
+  const onExportVideo = async () => {
+    if (!media?.videoEl || exporting) return;
+    setExporting(true);
+    setExportProgress(0);
+    try {
+      await exportVideo(
+        media.videoEl,
+        (frame) =>
+          processAsync({
+            imageData: frame,
+            algorithmId,
+            palette: activeColors,
+            scale,
+            threshold,
+            serpentine: algorithmId.includes('serpentine'),
+            preEffects,
+            postEffects,
+          }),
+        media.width,
+        media.height,
+        setExportProgress
+      );
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setExporting(false);
+      setExportProgress(0);
+    }
+  };
+
   return (
     <div className="app">
       <TopBar
@@ -287,6 +373,10 @@ export default function App() {
             downloadImageData(preview, `dithyr-${Date.now()}.png`);
           }
         }}
+        onExportVideo={media?.videoEl ? onExportVideo : undefined}
+        exporting={exporting}
+        exportProgress={exportProgress}
+        onToggleCompare={() => setCompareMode((value) => !value)}
       />
       <input
         ref={fileInputRef}
@@ -303,6 +393,8 @@ export default function App() {
         <div className="canvas-area">
           <CanvasView
             imageData={preview}
+            sourceImageData={sourceFrame}
+            compareMode={compareMode}
             onDropFiles={onDropFiles}
             processing={processing}
           />
@@ -313,16 +405,13 @@ export default function App() {
               playing={playing}
               onSeek={(t) => {
                 const v = media.videoEl!;
-                v.currentTime = t;
-                const onSeeked = () => {
+                void seekVideoFrame(v, t).then(() => {
                   const frame = grabVideoFrame(v);
                   setSourceFrame(frame);
                   setMedia((m) =>
                     m ? { ...m, currentTime: t, imageData: frame } : m
                   );
-                  v.removeEventListener('seeked', onSeeked);
-                };
-                v.addEventListener('seeked', onSeeked);
+                });
               }}
               onTogglePlay={() => {
                 const v = media.videoEl!;

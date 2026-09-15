@@ -2,23 +2,37 @@ import { useEffect, useRef, useState, type DragEvent } from 'react';
 
 interface CanvasViewProps {
   imageData: ImageData | null;
+  sourceImageData?: ImageData | null;
+  compareMode: boolean;
   onDropFiles: (files: FileList) => void;
   processing?: boolean;
 }
 
-export function CanvasView({ imageData, onDropFiles, processing }: CanvasViewProps) {
+export function CanvasView({
+  imageData,
+  sourceImageData,
+  compareMode,
+  onDropFiles,
+  processing,
+}: CanvasViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dragging, setDragging] = useState(false);
+  const displayedImageData = compareMode ? sourceImageData ?? imageData : imageData;
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !imageData) return;
-    canvas.width = imageData.width;
-    canvas.height = imageData.height;
+    if (!canvas) return;
+    if (!displayedImageData) {
+      canvas.width = 0;
+      canvas.height = 0;
+      return;
+    }
+    canvas.width = displayedImageData.width;
+    canvas.height = displayedImageData.height;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.putImageData(imageData, 0, 0);
-  }, [imageData]);
+    ctx.putImageData(displayedImageData, 0, 0);
+  }, [displayedImageData]);
 
   const onDragOver = (e: DragEvent) => {
     e.preventDefault();

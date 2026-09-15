@@ -351,3 +351,84 @@ export function createEffect(type: EffectType): EffectInstance {
     params: { ...EFFECT_DEFAULTS[type] },
   };
 }
+
+export function exportEffectPreset(
+  pre: EffectInstance[],
+  post: EffectInstance[]
+): string {
+  const serialize = ({ type, enabled, params }: EffectInstance) => ({
+    type,
+    enabled,
+    params,
+  });
+  return JSON.stringify(
+    {
+      pre: pre.map(serialize),
+      post: post.map(serialize),
+    },
+    null,
+    2
+  );
+}
+
+export function importEffectPreset(
+  json: string
+): { pre: EffectInstance[]; post: EffectInstance[] } {
+  const data = JSON.parse(json) as unknown;
+  if (!isPresetData(data)) {
+    throw new Error('Effect preset must contain pre and post arrays');
+  }
+
+  const deserialize = (entry: unknown) => {
+    if (!isEffectEntry(entry)) {
+      throw new Error('Effect preset contains an invalid effect');
+    }
+    return {
+      ...createEffect(entry.type),
+      enabled: entry.enabled ?? true,
+      params: normalizeParams(entry.type, entry.params),
+    };
+  };
+
+  return {
+    pre: data.pre.map(deserialize),
+    post: data.post.map(deserialize),
+  };
+}
+
+function isPresetData(data: unknown): data is { pre: unknown[]; post: unknown[] } {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    Array.isArray((data as { pre?: unknown }).pre) &&
+    Array.isArray((data as { post?: unknown }).post)
+  );
+}
+
+function isEffectEntry(
+  entry: unknown
+): entry is { type: EffectType; enabled?: boolean; params?: unknown } {
+  return (
+    typeof entry === 'object' &&
+    entry !== null &&
+    isEffectType((entry as { type?: unknown }).type)
+  );
+}
+
+function isEffectType(type: unknown): type is EffectType {
+  return typeof type === 'string' && type in EFFECT_DEFAULTS;
+}
+
+function normalizeParams(type: EffectType, params: unknown) {
+  const defaults = EFFECT_DEFAULTS[type];
+  if (typeof params !== 'object' || params === null) return { ...defaults };
+
+  const normalized = { ...defaults };
+  for (const key of Object.keys(defaults)) {
+    const value = (params as Record<string, unknown>)[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      normalized[key] = value;
+    }
+  }
+  return normalized;
+}

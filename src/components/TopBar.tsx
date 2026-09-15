@@ -5,8 +5,12 @@ interface TopBarProps {
   onRedo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  onToggleCompare: () => void;
+  onExportVideo?: () => void;
   fileName?: string;
   processing?: boolean;
+  exporting?: boolean;
+  exportProgress?: number;
 }
 
 export function TopBar({
@@ -16,8 +20,12 @@ export function TopBar({
   onRedo,
   canUndo,
   canRedo,
+  onToggleCompare,
+  onExportVideo,
   fileName,
   processing,
+  exporting,
+  exportProgress = 0,
 }: TopBarProps) {
   return (
     <header className="topbar">
@@ -51,6 +59,21 @@ export function TopBar({
         <button type="button" className="btn" onClick={onOpen}>
           Open
         </button>
+        <button type="button" className="btn" onClick={onToggleCompare}>
+          Compare
+        </button>
+        {onExportVideo && (
+          <button
+            type="button"
+            className="btn"
+            onClick={onExportVideo}
+            disabled={exporting}
+          >
+            {exporting
+              ? `Exporting ${Math.round(exportProgress * 100)}%`
+              : 'Export Video'}
+          </button>
+        )}
         <button type="button" className="btn btn-primary" onClick={onExport}>
           Export PNG
         </button>
