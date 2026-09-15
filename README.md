@@ -79,6 +79,23 @@ Document settings (algorithm, palette, scale, threshold, effect stacks) support 
 
 Continuous slider drags are debounced (~300ms) so history stays usable; discrete picks commit immediately.
 
+
+## Branding
+
+Primary chrome uses SVG marks (`public/logo-mark.svg`, `public/logo-wordmark.svg`) in the top bar and as the favicon.
+
+Raster logos (PNG) are stored as base64 in `scripts/brand-assets.b64.json` and written into `public/` by `npm run assets` / `predev` / `prebuild` (so clones and CI get real PNGs for OG + apple-touch icons).
+
+| File | Use |
+|------|-----|
+| `logo-mark.svg` / `logo-wordmark.svg` | Top bar + favicon |
+| `logo-mark.png` / `logo-wordmark.png` | Full raster brand |
+| `logo-*-sm.png` | Compact rasters |
+| `favicon.png` / `favicon-32.png` | PNG favicons |
+| `og-image.png` | Open Graph share image |
+
+Accent purple ≈ `#9d81e1` / `#7c6cff`.
+
 ## Stack
 
 Vite · React · TypeScript · Web Workers · Canvas
