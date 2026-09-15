@@ -65,7 +65,7 @@ Built-ins: Black & White, CGA, Game Boy, Commodore 64, Pico-8, Apple II, plus ar
 
 ### Limitations
 
-- Video/GIF **export** (encoding a processed video file) is not included in this MVP — scrub and preview frames, export stills.
+- Video export is WebM via MediaRecorder (browser-dependent). GIF encoding is not included — scrub/preview frames and export stills or WebM.
 - Very large images are capped at 1600px on the long edge for performance.
 - Blue-noise is a multi-octave hash approximation (not a precomputed void-and-cluster texture).
 
@@ -84,7 +84,7 @@ Continuous slider drags are debounced (~300ms) so history stays usable; discrete
 
 Primary chrome uses SVG marks (`public/logo-mark.svg`, `public/logo-wordmark.svg`) in the top bar and as the favicon.
 
-Raster logos (PNG) are stored as base64 in `scripts/brand-assets.b64.json` and written into `public/` by `npm run assets` / `predev` / `prebuild` (so clones and CI get real PNGs for OG + apple-touch icons).
+Raster logos (PNG) are stored as base64 in `scripts/brand-assets-*.b64.json` (large images may be split across `*_pN_png.b64.json` parts keyed as `file.png#partNofM`) and written into `public/` by `npm run assets` / `predev` / `prebuild` (so clones and CI get real PNGs for OG + apple-touch icons).
 
 | File | Use |
 |------|-----|
