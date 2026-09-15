@@ -12,7 +12,18 @@ import {
 import { processAsync } from './pipeline/workerClient';
 import { createSampleImage } from './utils/sampleImage';
 import { downloadImageData } from './utils/export';
+import { useDocHistory, type DocSnapshot } from './hooks/useDocHistory';
 import type { EffectInstance, LoadedMedia, Palette, RGB } from './types';
+
+const INITIAL_DOC: DocSnapshot = {
+  algorithmId: 'floyd-steinberg',
+  paletteId: 'pico8',
+  customPalette: null,
+  scale: 2,
+  threshold: 0.5,
+  preEffects: [],
+  postEffects: [],
+};
 
 export default function App() {
   const [media, setMedia] = useState<LoadedMedia | null>(null);
@@ -20,13 +31,25 @@ export default function App() {
   const [preview, setPreview] = useState<ImageData | null>(null);
   const [processing, setProcessing] = useState(false);
 
-  const [algorithmId, setAlgorithmId] = useState('floyd-steinberg');
-  const [paletteId, setPaletteId] = useState('pico8');
-  const [customPalette, setCustomPalette] = useState<Palette | null>(null);
-  const [scale, setScale] = useState(2);
-  const [threshold, setThreshold] = useState(0.5);
-  const [preEffects, setPreEffects] = useState<EffectInstance[]>([]);
-  const [postEffects, setPostEffects] = useState<EffectInstance[]>([]);
+  const {
+    present: doc,
+    commit,
+    commitDebounced,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useDocHistory(INITIAL_DOC);
+
+  const {
+    algorithmId,
+    paletteId,
+    customPalette,
+    scale,
+    threshold,
+    preEffects,
+    postEffects,
+  } = doc;
 
   const [playing, setPlaying] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -38,6 +61,7 @@ export default function App() {
     return getPalette(paletteId).colors;
   }, [paletteId, customPalette]);
 
+  // Initial sample
   useEffect(() => {
     const sample = createSampleImage(640, 480);
     setSourceFrame(sample);
@@ -83,6 +107,40 @@ export default function App() {
     }
   }, [sourceFrame, runPipeline]);
 
+  // Keyboard undo/redo
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) {
+        if (tag === 'input' && (target as HTMLInputElement).type === 'range') {
+          // range inputs: still allow app undo
+        } else if (tag === 'input' || tag === 'textarea') {
+          return;
+        }
+      }
+      const key = e.key.toLowerCase();
+      if (key === 'z' && e.shiftKey) {
+        e.preventDefault();
+        redo();
+        return;
+      }
+      if (key === 'z') {
+        e.preventDefault();
+        undo();
+        return;
+      }
+      if (key === 'y') {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [undo, redo]);
+
   const grabVideoFrame = useCallback((video: HTMLVideoElement) => {
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth || 640;
@@ -92,6 +150,7 @@ export default function App() {
     return ctx.getImageData(0, 0, canvas.width, canvas.height);
   }, []);
 
+  // Video playback loop — update source frame
   useEffect(() => {
     if (!media?.videoEl || !playing) {
       if (videoRaf.current) cancelAnimationFrame(videoRaf.current);
@@ -197,11 +256,20 @@ export default function App() {
       method === 'median-cut'
         ? extractPaletteMedianCut(sourceFrame, 8)
         : extractPaletteKMeans(sourceFrame, 8);
-    setCustomPalette({
+    const p: Palette = {
       id: `extracted-${Date.now()}`,
       name: `Extracted (${method})`,
       colors,
-    });
+    };
+    commit((d) => ({ ...d, customPalette: p, paletteId: p.id }));
+  };
+
+  const patchDebounced = (partial: Partial<DocSnapshot>) => {
+    commitDebounced((d) => ({ ...d, ...partial }));
+  };
+
+  const patchCommit = (partial: Partial<DocSnapshot>) => {
+    commit((d) => ({ ...d, ...partial }));
   };
 
   return (
@@ -209,6 +277,10 @@ export default function App() {
       <TopBar
         fileName={media?.name}
         processing={processing}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={undo}
+        onRedo={redo}
         onOpen={() => fileInputRef.current?.click()}
         onExport={() => {
           if (preview) {
@@ -267,27 +339,51 @@ export default function App() {
         </div>
         <Inspector
           algorithmId={algorithmId}
-          onAlgorithm={setAlgorithmId}
+          onAlgorithm={(id) => patchCommit({ algorithmId: id })}
           paletteId={paletteId}
           customPalette={customPalette}
           activeColors={activeColors}
-          onSelectBuiltin={(id) => {
-            setPaletteId(id);
-            setCustomPalette(null);
-          }}
-          onCustomChange={(p) => {
-            setCustomPalette(p);
-            setPaletteId(p.id);
-          }}
+          onSelectBuiltin={(id) =>
+            patchCommit({ paletteId: id, customPalette: null })
+          }
+          onCustomChange={(p) =>
+            patchDebounced({ customPalette: p, paletteId: p.id })
+          }
           onExtract={onExtract}
           scale={scale}
-          onScale={setScale}
+          onScale={(v) => patchDebounced({ scale: v })}
           threshold={threshold}
-          onThreshold={setThreshold}
+          onThreshold={(v) => patchDebounced({ threshold: v })}
           preEffects={preEffects}
           postEffects={postEffects}
-          onPreEffects={setPreEffects}
-          onPostEffects={setPostEffects}
+          onPreEffects={(e: EffectInstance[]) => {
+            const prev = preEffects;
+            const structural =
+              e.length !== prev.length ||
+              e.some(
+                (x, i) =>
+                  !prev[i] ||
+                  x.id !== prev[i].id ||
+                  x.enabled !== prev[i].enabled ||
+                  x.type !== prev[i].type
+              );
+            if (structural) patchCommit({ preEffects: e });
+            else patchDebounced({ preEffects: e });
+          }}
+          onPostEffects={(e: EffectInstance[]) => {
+            const prev = postEffects;
+            const structural =
+              e.length !== prev.length ||
+              e.some(
+                (x, i) =>
+                  !prev[i] ||
+                  x.id !== prev[i].id ||
+                  x.enabled !== prev[i].enabled ||
+                  x.type !== prev[i].type
+              );
+            if (structural) patchCommit({ postEffects: e });
+            else patchDebounced({ postEffects: e });
+          }}
           algorithmCount={ALGORITHM_COUNT}
         />
       </div>
