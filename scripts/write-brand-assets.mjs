@@ -18,6 +18,8 @@ if (!Object.keys(assets).length) {
 }
 for (const [name, b64] of Object.entries(assets)) {
   const buf = Buffer.from(b64, 'base64');
-  writeFileSync(join(pub, name), buf);
+  const out = name.includes('/') ? join(root, name) : join(pub, name);
+  mkdirSync(dirname(out), { recursive: true });
+  writeFileSync(out, buf);
   console.log('wrote', name, buf.length, 'bytes');
 }
