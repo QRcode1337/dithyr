@@ -106,9 +106,14 @@ button {
   transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
 }
 
-.btn:hover {
+.btn:hover:not(:disabled) {
   border-color: var(--border-strong);
   background: #1a1d27;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .btn-primary {
@@ -373,7 +378,7 @@ input[type='range'] {
 .algo-group-title {
   font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   color: var(--text-dim);
   margin: 4px 0;
 }
