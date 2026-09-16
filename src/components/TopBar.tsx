@@ -44,16 +44,16 @@ export function TopBar({
           className="brand-mark"
           src={LOGO_MARK_SM_SRC}
           alt=""
-          width={28}
-          height={28}
+          width={48}
+          height={48}
           draggable={false}
         />
         <img
           className="brand-wordmark"
           src={LOGO_WORDMARK_SM_SRC}
           alt="dithyr"
-          height={18}
-          width={92}
+          height={32}
+          width={164}
           draggable={false}
         />
         <span className="brand-tagline">creative dithering studio</span>
