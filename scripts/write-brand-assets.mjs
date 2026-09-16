@@ -7,14 +7,15 @@ const scripts = join(root, 'scripts');
 const pub = join(root, 'public');
 mkdirSync(pub, { recursive: true });
 
-// Reassemble brand-assets-NAME.frag.NNN into brand-assets-NAME
+// Reassemble brand-assets-NAME.frag.NNN[.hex] into brand-assets-NAME
 const frags = {};
 for (const name of readdirSync(scripts)) {
-  const m = /^(brand-assets-.+)\.frag\.(\d+)$/.exec(name);
+  const m = /^(brand-assets-.+)\.frag\.(\d+)(\.hex)?$/.exec(name);
   if (!m) continue;
-  const [, base, idx] = m;
+  const [, base, idx, hex] = m;
   if (!frags[base]) frags[base] = {};
-  frags[base][Number(idx)] = readFileSync(join(scripts, name), 'utf8');
+  const raw = readFileSync(join(scripts, name), 'utf8');
+  frags[base][Number(idx)] = hex ? Buffer.from(raw.trim(), 'hex').toString('utf8') : raw;
 }
 for (const [base, parts] of Object.entries(frags)) {
   const idxs = Object.keys(parts).map(Number).sort((a, b) => a - b);
