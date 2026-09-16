@@ -10,7 +10,7 @@ import {
   getPalette,
 } from './dither/palettes';
 import { processAsync } from './pipeline/workerClient';
-import { createSampleImage } from './utils/sampleImage';
+import { loadSampleImage } from './utils/sampleImage';
 import { downloadImageData, exportVideo } from './utils/export';
 import { useDocHistory, type DocSnapshot } from './hooks/useDocHistory';
 import type { EffectInstance, LoadedMedia, Palette, RGB } from './types';
@@ -66,16 +66,16 @@ export default function App() {
     return getPalette(paletteId).colors;
   }, [paletteId, customPalette]);
 
-  // Initial sample
   useEffect(() => {
-    const sample = createSampleImage(640, 480);
-    setSourceFrame(sample);
-    setMedia({
-      kind: 'image',
-      name: 'sample-gradient.png',
-      width: sample.width,
-      height: sample.height,
-      imageData: sample,
+    void loadSampleImage().then((sample) => {
+      setSourceFrame(sample);
+      setMedia({
+        kind: 'image',
+        name: 'dithyr.png',
+        width: sample.width,
+        height: sample.height,
+        imageData: sample,
+      });
     });
   }, []);
 
@@ -95,9 +95,7 @@ export default function App() {
           preEffects,
           postEffects,
         });
-        if (id === reqRef.current) {
-          setPreview(result);
-        }
+        if (id === reqRef.current) setPreview(result);
       } catch (err) {
         console.error(err);
       } finally {
@@ -116,12 +114,9 @@ export default function App() {
   );
 
   useEffect(() => {
-    if (sourceFrame) {
-      void runPipeline(sourceFrame);
-    }
+    if (sourceFrame) void runPipeline(sourceFrame);
   }, [sourceFrame, runPipeline]);
 
-  // Keyboard undo/redo
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
@@ -129,27 +124,14 @@ export default function App() {
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName?.toLowerCase();
       if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) {
-        if (tag === 'input' && (target as HTMLInputElement).type === 'range') {
-          // range inputs: still allow app undo
-        } else if (tag === 'input' || tag === 'textarea') {
-          return;
+        if (!(tag === 'input' && (target as HTMLInputElement).type === 'range')) {
+          if (tag === 'input' || tag === 'textarea') return;
         }
       }
       const key = e.key.toLowerCase();
-      if (key === 'z' && e.shiftKey) {
-        e.preventDefault();
-        redo();
-        return;
-      }
-      if (key === 'z') {
-        e.preventDefault();
-        undo();
-        return;
-      }
-      if (key === 'y') {
-        e.preventDefault();
-        redo();
-      }
+      if (key === 'z' && e.shiftKey) { e.preventDefault(); redo(); return; }
+      if (key === 'z') { e.preventDefault(); undo(); return; }
+      if (key === 'y') { e.preventDefault(); redo(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -170,32 +152,20 @@ export default function App() {
         requestAnimationFrame(() => resolve());
         return;
       }
-
       const cleanup = () => {
         window.clearTimeout(timeout);
         video.removeEventListener('seeked', done);
         video.removeEventListener('error', fail);
       };
-      const done = () => {
-        cleanup();
-        resolve();
-      };
-      const fail = () => {
-        cleanup();
-        reject(new Error('Failed to seek video'));
-      };
-      const timeout = window.setTimeout(() => {
-        cleanup();
-        reject(new Error('Timed out seeking video'));
-      }, 5000);
-
+      const done = () => { cleanup(); resolve(); };
+      const fail = () => { cleanup(); reject(new Error('Failed to seek video')); };
+      const timeout = window.setTimeout(() => { cleanup(); reject(new Error('Timed out seeking video')); }, 5000);
       video.addEventListener('seeked', done);
       video.addEventListener('error', fail);
       video.currentTime = time;
     });
   }, []);
 
-  // Video playback loop — update source frame
   useEffect(() => {
     if (!media?.videoEl || !playing) {
       if (videoRaf.current) cancelAnimationFrame(videoRaf.current);
@@ -203,36 +173,15 @@ export default function App() {
     }
     const video = media.videoEl;
     const tick = () => {
-      if (video.paused || video.ended) {
-        setPlaying(false);
-        return;
-      }
+      if (video.paused || video.ended) { setPlaying(false); return; }
+      const frame = grabVideoFrame(video);
       if (!processingRef.current) {
-        const frame = grabVideoFrame(video);
         pendingVideoFrameRef.current = null;
         setSourceFrame(frame);
-        setMedia((m) =>
-          m
-            ? {
-                ...m,
-                currentTime: video.currentTime,
-                imageData: frame,
-              }
-            : m
-        );
       } else {
-        const frame = grabVideoFrame(video);
         pendingVideoFrameRef.current = frame;
-        setMedia((m) =>
-          m
-            ? {
-                ...m,
-                currentTime: video.currentTime,
-                imageData: frame,
-              }
-            : m
-        );
       }
+      setMedia((m) => (m ? { ...m, currentTime: video.currentTime, imageData: frame } : m));
       videoRaf.current = requestAnimationFrame(tick);
     };
     videoRaf.current = requestAnimationFrame(tick);
@@ -268,7 +217,6 @@ export default function App() {
       setPlaying(false);
       return;
     }
-
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.src = url;
@@ -292,13 +240,7 @@ export default function App() {
     const imageData = ctx.getImageData(0, 0, w, h);
     URL.revokeObjectURL(url);
     setSourceFrame(imageData);
-    setMedia({
-      kind: 'image',
-      name: file.name,
-      width: w,
-      height: h,
-      imageData,
-    });
+    setMedia({ kind: 'image', name: file.name, width: w, height: h, imageData });
   };
 
   const onDropFiles = (files: FileList) => {
@@ -312,21 +254,12 @@ export default function App() {
       method === 'median-cut'
         ? extractPaletteMedianCut(sourceFrame, 8)
         : extractPaletteKMeans(sourceFrame, 8);
-    const p: Palette = {
-      id: `extracted-${Date.now()}`,
-      name: `Extracted (${method})`,
-      colors,
-    };
+    const p: Palette = { id: `extracted-${Date.now()}`, name: `Extracted (${method})`, colors };
     commit((d) => ({ ...d, customPalette: p, paletteId: p.id }));
   };
 
-  const patchDebounced = (partial: Partial<DocSnapshot>) => {
-    commitDebounced((d) => ({ ...d, ...partial }));
-  };
-
-  const patchCommit = (partial: Partial<DocSnapshot>) => {
-    commit((d) => ({ ...d, ...partial }));
-  };
+  const patchDebounced = (partial: Partial<DocSnapshot>) => commitDebounced((d) => ({ ...d, ...partial }));
+  const patchCommit = (partial: Partial<DocSnapshot>) => commit((d) => ({ ...d, ...partial }));
 
   const onExportVideo = async () => {
     if (!media?.videoEl || exporting) return;
@@ -368,36 +301,16 @@ export default function App() {
         onUndo={undo}
         onRedo={redo}
         onOpen={() => fileInputRef.current?.click()}
-        onExport={() => {
-          if (preview) {
-            downloadImageData(preview, `dithyr-${Date.now()}.png`);
-          }
-        }}
+        onExport={() => { if (preview) downloadImageData(preview, `dithyr-${Date.now()}.png`); }}
         onExportVideo={media?.videoEl ? onExportVideo : undefined}
         exporting={exporting}
         exportProgress={exportProgress}
         onToggleCompare={() => setCompareMode((value) => !value)}
       />
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,video/*,.gif"
-        hidden
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) void loadFile(f);
-          e.target.value = '';
-        }}
-      />
+      <input ref={fileInputRef} type="file" accept="image/*,video/*,.gif" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void loadFile(f); e.target.value = ''; }} />
       <div className="workspace">
         <div className="canvas-area">
-          <CanvasView
-            imageData={preview}
-            sourceImageData={sourceFrame}
-            compareMode={compareMode}
-            onDropFiles={onDropFiles}
-            processing={processing}
-          />
+          <CanvasView imageData={preview} sourceImageData={sourceFrame} compareMode={compareMode} onDropFiles={onDropFiles} processing={processing} />
           {media?.videoEl && (
             <VideoTimeline
               duration={media.duration || 0}
@@ -408,20 +321,13 @@ export default function App() {
                 void seekVideoFrame(v, t).then(() => {
                   const frame = grabVideoFrame(v);
                   setSourceFrame(frame);
-                  setMedia((m) =>
-                    m ? { ...m, currentTime: t, imageData: frame } : m
-                  );
+                  setMedia((m) => (m ? { ...m, currentTime: t, imageData: frame } : m));
                 });
               }}
               onTogglePlay={() => {
                 const v = media.videoEl!;
-                if (playing) {
-                  v.pause();
-                  setPlaying(false);
-                } else {
-                  void v.play();
-                  setPlaying(true);
-                }
+                if (playing) { v.pause(); setPlaying(false); }
+                else { void v.play(); setPlaying(true); }
               }}
             />
           )}
@@ -432,12 +338,8 @@ export default function App() {
           paletteId={paletteId}
           customPalette={customPalette}
           activeColors={activeColors}
-          onSelectBuiltin={(id) =>
-            patchCommit({ paletteId: id, customPalette: null })
-          }
-          onCustomChange={(p) =>
-            patchDebounced({ customPalette: p, paletteId: p.id })
-          }
+          onSelectBuiltin={(id) => patchCommit({ paletteId: id, customPalette: null })}
+          onCustomChange={(p) => patchDebounced({ customPalette: p, paletteId: p.id })}
           onExtract={onExtract}
           scale={scale}
           onScale={(v) => patchDebounced({ scale: v })}
@@ -447,31 +349,13 @@ export default function App() {
           postEffects={postEffects}
           onPreEffects={(e: EffectInstance[]) => {
             const prev = preEffects;
-            const structural =
-              e.length !== prev.length ||
-              e.some(
-                (x, i) =>
-                  !prev[i] ||
-                  x.id !== prev[i].id ||
-                  x.enabled !== prev[i].enabled ||
-                  x.type !== prev[i].type
-              );
-            if (structural) patchCommit({ preEffects: e });
-            else patchDebounced({ preEffects: e });
+            const structural = e.length !== prev.length || e.some((x, i) => !prev[i] || x.id !== prev[i].id || x.enabled !== prev[i].enabled || x.type !== prev[i].type);
+            if (structural) patchCommit({ preEffects: e }); else patchDebounced({ preEffects: e });
           }}
           onPostEffects={(e: EffectInstance[]) => {
             const prev = postEffects;
-            const structural =
-              e.length !== prev.length ||
-              e.some(
-                (x, i) =>
-                  !prev[i] ||
-                  x.id !== prev[i].id ||
-                  x.enabled !== prev[i].enabled ||
-                  x.type !== prev[i].type
-              );
-            if (structural) patchCommit({ postEffects: e });
-            else patchDebounced({ postEffects: e });
+            const structural = e.length !== prev.length || e.some((x, i) => !prev[i] || x.id !== prev[i].id || x.enabled !== prev[i].enabled || x.type !== prev[i].type);
+            if (structural) patchCommit({ postEffects: e }); else patchDebounced({ postEffects: e });
           }}
           algorithmCount={ALGORITHM_COUNT}
         />
