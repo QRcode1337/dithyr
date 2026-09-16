@@ -3,6 +3,7 @@
   --bg: #0a0b0f;
   --bg-elevated: #13151c;
   --bg-panel: #101218;
+  --bg-hover: #1a1d28;
   --border: #232733;
   --border-strong: #3a4154;
   --text: #eceef4;
@@ -19,9 +20,7 @@
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
   --shadow-panel: 0 12px 40px rgba(0, 0, 0, 0.35);
 }
-
 * { box-sizing: border-box; }
-
 html, body, #root {
   margin: 0;
   height: 100%;
@@ -30,8 +29,10 @@ html, body, #root {
   color: var(--text);
   font-family: var(--font);
   font-size: 13px;
+  -webkit-font-smoothing: antialiased;
 }
-
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
 .app {
   display: grid;
   grid-template-rows: 56px 1fr;
