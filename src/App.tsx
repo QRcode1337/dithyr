@@ -71,7 +71,7 @@ export default function App() {
       setSourceFrame(sample);
       setMedia({
         kind: 'image',
-        name: 'dithyr.png',
+        name: 'dithyr-logo.png',
         width: sample.width,
         height: sample.height,
         imageData: sample,
@@ -360,6 +360,11 @@ export default function App() {
           algorithmCount={ALGORITHM_COUNT}
         />
       </div>
+      <footer className="made-by">
+        <a href="https://epsilonsec.ai" target="_blank" rel="noopener noreferrer">
+          made by <span>Epsilonsec.ai</span>
+        </a>
+      </footer>
     </div>
   );
 }

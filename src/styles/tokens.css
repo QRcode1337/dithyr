@@ -35,9 +35,59 @@ button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 .app {
   display: grid;
-  grid-template-rows: 56px 1fr;
+  grid-template-rows: 84px 1fr auto;
   height: 100%;
   height: 100dvh;
   overflow: hidden;
   position: relative;
+}
+@media (max-width: 720px) {
+  .app {
+    grid-template-rows: 68px 1fr auto;
+  }
+}
+
+.made-by {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 7px 14px;
+  border-top: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, rgba(157, 129, 225, 0.07), transparent 80%),
+    #0c0e14;
+  z-index: 4;
+}
+
+.made-by a {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.made-by a span {
+  color: var(--accent-2);
+  letter-spacing: 0.06em;
+  text-transform: none;
+}
+
+.made-by a:hover {
+  color: var(--text);
+}
+
+.made-by a:hover span {
+  color: var(--accent);
+  text-shadow: 0 0 12px var(--accent-glow);
+}
+
+.made-by a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+  border-radius: 4px;
 }
