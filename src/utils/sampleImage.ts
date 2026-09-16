@@ -1,7 +1,5 @@
 import { DEFAULT_SAMPLE_DATA_URL } from './defaultSample';
 
-import { DEFAULT_SAMPLE_DATA_URL } from './defaultSample';
-
 const CANDIDATES = ['/mage.jpg', DEFAULT_SAMPLE_DATA_URL, '/dithyr-logo.png', '/logo-lockup.png'];
 
 export async function loadSampleImage(): Promise<ImageData> {
