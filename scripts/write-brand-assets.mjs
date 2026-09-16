@@ -7,6 +7,22 @@ const scripts = join(root, 'scripts');
 const pub = join(root, 'public');
 mkdirSync(pub, { recursive: true });
 
+// Reassemble brand-assets-NAME.frag.NNN into brand-assets-NAME
+const frags = {};
+for (const name of readdirSync(scripts)) {
+  const m = /^(brand-assets-.+)\.frag\.(\d+)$/.exec(name);
+  if (!m) continue;
+  const [, base, idx] = m;
+  if (!frags[base]) frags[base] = {};
+  frags[base][Number(idx)] = readFileSync(join(scripts, name), 'utf8');
+}
+for (const [base, parts] of Object.entries(frags)) {
+  const idxs = Object.keys(parts).map(Number).sort((a, b) => a - b);
+  const body = idxs.map((i) => parts[i]).join('');
+  writeFileSync(join(scripts, base), body);
+  console.log('reassembled', base, body.length, 'bytes');
+}
+
 const assets = {};
 for (const name of readdirSync(scripts)) {
   if (!name.startsWith('brand-assets') || !name.endsWith('.b64.json')) continue;
