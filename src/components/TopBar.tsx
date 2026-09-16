@@ -40,7 +40,7 @@ export function TopBar({
       <div className="brand">
         <img
           className="brand-mark"
-          src="/logo-mark.svg"
+          src="/logo-mark-sm.png"
           alt=""
           width={28}
           height={28}
@@ -48,9 +48,9 @@ export function TopBar({
         />
         <img
           className="brand-wordmark"
-          src="/logo-wordmark.svg"
+          src="/logo-wordmark-sm.png"
           alt="dithyr"
-          height={20}
+          height={18}
           width={92}
           draggable={false}
         />
