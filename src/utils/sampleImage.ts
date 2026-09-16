@@ -1,55 +1,47 @@
 import { DEFAULT_SAMPLE_DATA_URL } from './defaultSample';
 
-/** Load the official dithyr lockup as the first-open sample (gradient fallback). */
-export async function loadSampleImage(
-  url = DEFAULT_SAMPLE_DATA_URL
-): Promise<ImageData> {
-  try {
-    const img = await loadHtmlImage(url);
-    const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('no 2d context');
-    ctx.drawImage(img, 0, 0);
-    return ctx.getImageData(0, 0, canvas.width, canvas.height);
-  } catch {
-    return createSampleImage(640, 480);
+const CANDIDATES = ['/dithyr-logo.png', '/logo-lockup.png', DEFAULT_SAMPLE_DATA_URL];
+
+export async function loadSampleImage(): Promise<ImageData> {
+  for (const url of CANDIDATES) {
+    if (!url) continue;
+    try {
+      return await decodeUrl(url);
+    } catch {
+      /* try next */
+    }
   }
+  return createSampleImage(640, 480);
 }
 
-function loadHtmlImage(url: string): Promise<HTMLImageElement> {
+function decodeUrl(url: string): Promise<ImageData> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.decoding = 'async';
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error(`failed to load ${url}`));
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { reject(new Error('no 2d')); return; }
+      ctx.drawImage(img, 0, 0);
+      resolve(ctx.getImageData(0, 0, canvas.width, canvas.height));
+    };
+    img.onerror = () => reject(new Error(`failed ${url}`));
     img.src = url;
   });
 }
 
 export function createSampleImage(width = 640, height = 480): ImageData {
   const data = new Uint8ClampedArray(width * height * 4);
-  const cx = width / 2;
-  const cy = height / 2;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const i = (y * width + x) * 4;
       const u = x / width;
       const v = y / height;
-      let r = 30 + u * 180 + Math.sin(v * Math.PI) * 40;
-      let g = 40 + v * 120 + Math.cos(u * Math.PI * 2) * 30;
-      let b = 90 + (1 - u) * 140;
-      const d1 = Math.sqrt((x - cx * 0.7) ** 2 + (y - cy * 0.6) ** 2);
-      if (d1 < 120) {
-        const t = 1 - d1 / 120;
-        r = r * (1 - t) + 255 * t;
-        g = g * (1 - t) + 160 * t;
-        b = b * (1 - t) + 60 * t;
-      }
-      data[i] = Math.max(0, Math.min(255, r));
-      data[i + 1] = Math.max(0, Math.min(255, g));
-      data[i + 2] = Math.max(0, Math.min(255, b));
+      data[i] = Math.max(0, Math.min(255, 20 + u * 40));
+      data[i + 1] = Math.max(0, Math.min(255, 16 + v * 24));
+      data[i + 2] = Math.max(0, Math.min(255, 28 + (1 - u) * 36));
       data[i + 3] = 255;
     }
   }
