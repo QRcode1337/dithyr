@@ -71,7 +71,7 @@ export default function App() {
       setSourceFrame(sample);
       setMedia({
         kind: 'image',
-        name: 'dithyr-logo.png',
+        name: 'mage.jpg',
         width: sample.width,
         height: sample.height,
         imageData: sample,

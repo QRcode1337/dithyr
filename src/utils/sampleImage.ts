@@ -1,6 +1,8 @@
 import { DEFAULT_SAMPLE_DATA_URL } from './defaultSample';
 
-const CANDIDATES = [DEFAULT_SAMPLE_DATA_URL, '/dithyr-logo.png', '/logo-lockup.png'];
+import { DEFAULT_SAMPLE_DATA_URL } from './defaultSample';
+
+const CANDIDATES = ['/mage.jpg', DEFAULT_SAMPLE_DATA_URL, '/dithyr-logo.png', '/logo-lockup.png'];
 
 export async function loadSampleImage(): Promise<ImageData> {
   for (const url of CANDIDATES) {
@@ -30,7 +32,7 @@ function decodeUrl(url: string): Promise<ImageData> {
       ctx.drawImage(img, 0, 0);
       resolve(ctx.getImageData(0, 0, canvas.width, canvas.height));
     };
-    img.onerror = () => reject(new Error(`failed ${url}`));
+    img.onerror = () => reject(new Error(`failed ${url.slice(0, 48)}`));
     img.src = url;
   });
 }
