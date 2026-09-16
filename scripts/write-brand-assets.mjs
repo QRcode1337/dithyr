@@ -18,9 +18,21 @@ for (const name of readdirSync(scripts)) {
   frags[base][Number(idx)] = hex ? Buffer.from(raw.trim(), 'hex').toString('utf8') : raw;
 }
 for (const [base, parts] of Object.entries(frags)) {
+  const dest = join(scripts, base);
+  // Prefer a committed whole file over legacy/incomplete frag packs.
+  try {
+    const existing = readFileSync(dest, 'utf8');
+    if (existing.trim().startsWith('{')) {
+      JSON.parse(existing);
+      console.log('keeping committed', base, existing.length, 'bytes');
+      continue;
+    }
+  } catch {
+    // missing or invalid — fall through to frag reassembly
+  }
   const idxs = Object.keys(parts).map(Number).sort((a, b) => a - b);
   const body = idxs.map((i) => parts[i]).join('');
-  writeFileSync(join(scripts, base), body);
+  writeFileSync(dest, body);
   console.log('reassembled', base, body.length, 'bytes');
 }
 
