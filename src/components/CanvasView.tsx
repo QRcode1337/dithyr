@@ -1,3 +1,4 @@
+import { LOGO_MARK_SM_SRC } from '../brand/assets';
 import { useEffect, useRef, useState, type DragEvent, type WheelEvent } from 'react';
 
 interface CanvasViewProps {
@@ -71,7 +72,7 @@ export function CanvasView({
             <canvas ref={canvasRef} />
           ) : (
             <div className="empty-stage">
-              <img src="/logo-mark.svg" alt="" width={56} height={56} className="empty-mark" />
+              <img src={LOGO_MARK_SM_SRC} alt="" width={56} height={56} className="empty-mark" />
               <p className="empty-title">Drop media to begin</p>
               <p className="empty-sub">
                 Image, GIF, or video — dither becomes a material you can sculpt.

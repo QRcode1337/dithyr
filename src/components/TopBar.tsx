@@ -1,3 +1,5 @@
+import { LOGO_MARK_SM_SRC, LOGO_WORDMARK_SM_SRC } from '../brand/assets';
+
 interface TopBarProps {
   onOpen: () => void;
   onExport: () => void;
@@ -40,7 +42,7 @@ export function TopBar({
       <div className="brand">
         <img
           className="brand-mark"
-          src="/logo-mark-sm.png"
+          src={LOGO_MARK_SM_SRC}
           alt=""
           width={28}
           height={28}
@@ -48,7 +50,7 @@ export function TopBar({
         />
         <img
           className="brand-wordmark"
-          src="/logo-wordmark-sm.png"
+          src={LOGO_WORDMARK_SM_SRC}
           alt="dithyr"
           height={18}
           width={92}
