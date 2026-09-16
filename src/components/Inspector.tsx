@@ -83,7 +83,7 @@ export function Inspector(props: InspectorProps) {
       <div className="inspector-scroll">
         <Section id="algorithm" title="Algorithm" open={open.algorithm} onToggle={() => toggle('algorithm')} badge={<span className="chip">{props.algorithmCount}</span>}>
           <div className="algo-toolbar">
-            <input className="search-input" type="search" placeholder="Search algorithms\u2026" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search algorithms" />
+            <input className="search-input" type="search" placeholder="Search algorithms..." value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search algorithms" />
             <div className="seg-tabs" role="tablist" aria-label="Algorithm category">
               <button type="button" className={`seg-tab${catFilter === 'all' ? ' is-active' : ''}`} onClick={() => setCatFilter('all')}>All</button>
               {CATEGORIES.map((c) => (

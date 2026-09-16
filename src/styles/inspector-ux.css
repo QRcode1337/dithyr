@@ -10,7 +10,7 @@
 .explain-fold { border: 1px solid var(--border); border-radius: var(--radius-sm); background: rgba(0,0,0,0.18); padding: 0 8px; }
 .explain-fold > summary { cursor: pointer; list-style: none; padding: 6px 2px; font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
 .explain-fold > summary::-webkit-details-marker { display: none; }
-.explain-fold > summary::before { content: '\u25B8'; color: var(--accent-2); display: inline-block; width: 1em; }
-.explain-fold[open] > summary::before { content: '\u25BE'; }
+.explain-fold > summary::before { content: "▸"; color: var(--accent-2); display: inline-block; width: 1em; margin-right: 4px; }
+.explain-fold[open] > summary::before { content: "▾"; }
 .explain-fold-body { padding: 0 2px 8px; color: var(--text-dim); font-size: 12px; line-height: 1.45; }
 @media (max-width: 900px) { .inspector { max-height: 46vh; min-height: 180px; height: 46vh; } }

@@ -61,7 +61,7 @@ export function EffectStack({ stage, effects, onChange, open, onToggle }: Effect
       <label className="field">
         <span>Add effect</span>
         <select defaultValue="" onChange={(ev) => { if (ev.target.value) { add(ev.target.value as EffectInstance['type']); ev.target.value = ''; } }}>
-          <option value="" disabled>Choose\u2026</option>
+          <option value="" disabled>Choose...</option>
           {EFFECT_META.map((m) => <option key={m.type} value={m.type}>{m.name}</option>)}
         </select>
       </label>
