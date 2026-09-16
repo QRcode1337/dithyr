@@ -1,4 +1,32 @@
-/** Generate a tasteful gradient + shapes sample for first open */
+/** Load the official dithyr lockup as the first-open sample (gradient fallback). */
+export async function loadSampleImage(
+  url = '/dithyr-logo.png'
+): Promise<ImageData> {
+  try {
+    const img = await loadHtmlImage(url);
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('no 2d context');
+    ctx.drawImage(img, 0, 0);
+    return ctx.getImageData(0, 0, canvas.width, canvas.height);
+  } catch {
+    return createSampleImage(640, 480);
+  }
+}
+
+function loadHtmlImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.decoding = 'async';
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`failed to load ${url}`));
+    img.src = url;
+  });
+}
+
+/** Procedural gradient fallback if the lockup asset is missing */
 export function createSampleImage(width = 640, height = 480): ImageData {
   const data = new Uint8ClampedArray(width * height * 4);
   const cx = width / 2;
@@ -20,7 +48,7 @@ export function createSampleImage(width = 640, height = 480): ImageData {
         b = b * (1 - t) + 60 * t;
       }
 
-      const band = Math.abs((x + y) - (width + height) * 0.45);
+      const band = Math.abs(x + y - (width + height) * 0.45);
       if (band < 40) {
         const t = 1 - band / 40;
         r = r * (1 - t * 0.5) + 80 * t;

@@ -1,6 +1,7 @@
 import type { Palette, RGB } from '../types';
 import { BUILTIN_PALETTES, exportPaletteJson, importPaletteJson } from '../dither/palettes';
 import { downloadJson } from '../utils/export';
+import { Section } from './Section';
 
 interface PaletteEditorProps {
   paletteId: string;
@@ -9,6 +10,8 @@ interface PaletteEditorProps {
   onSelectBuiltin: (id: string) => void;
   onCustomChange: (palette: Palette) => void;
   onExtract: (method: 'median-cut' | 'k-means') => void;
+  open: boolean;
+  onToggle: () => void;
 }
 
 function rgbToHex([r, g, b]: RGB): string {
@@ -31,6 +34,8 @@ export function PaletteEditor({
   onSelectBuiltin,
   onCustomChange,
   onExtract,
+  open,
+  onToggle,
 }: PaletteEditorProps) {
   const working: Palette =
     customPalette ??
@@ -48,111 +53,111 @@ export function PaletteEditor({
   };
 
   return (
-    <section className="section">
-      <div className="section-header sticky">
-        <span>Palette</span>
-        <span className="chip">{activeColors.length} swatches</span>
-      </div>
-      <div className="section-body">
-        <label className="field">
-          <span>Built-in</span>
-          <select
-            value={customPalette ? 'custom' : paletteId}
-            onChange={(e) => {
-              if (e.target.value === 'custom') return;
-              onSelectBuiltin(e.target.value);
-            }}
-          >
-            {BUILTIN_PALETTES.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-            {customPalette && <option value="custom">{customPalette.name}</option>}
-          </select>
-        </label>
-
-        <div className="swatches">
-          {activeColors.map((c, i) => (
-            <button
-              key={i}
-              type="button"
-              className="swatch"
-              style={{ background: rgbToHex(c) }}
-              title={rgbToHex(c)}
-            >
-              <input
-                type="color"
-                value={rgbToHex(c)}
-                onChange={(e) => {
-                  const next = [...activeColors];
-                  next[i] = hexToRgb(e.target.value);
-                  ensureCustom(next);
-                }}
-              />
-            </button>
+    <Section
+      id="palette"
+      title="Palette"
+      open={open}
+      onToggle={onToggle}
+      badge={<span className="chip">{activeColors.length} swatches</span>}
+    >
+      <label className="field">
+        <span>Built-in</span>
+        <select
+          value={customPalette ? 'custom' : paletteId}
+          onChange={(e) => {
+            if (e.target.value === 'custom') return;
+            onSelectBuiltin(e.target.value);
+          }}
+        >
+          {BUILTIN_PALETTES.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
           ))}
-          <button
-            type="button"
-            className="swatch swatch-add"
-            onClick={() => ensureCustom([...activeColors, [157, 129, 225]])}
-            title="Add swatch"
-          >
-            +
-          </button>
-        </div>
+          {customPalette && <option value="custom">{customPalette.name}</option>}
+        </select>
+      </label>
 
-        <div className="row">
+      <div className="swatches">
+        {activeColors.map((c, i) => (
           <button
+            key={i}
             type="button"
-            className="btn btn-block"
-            onClick={() => onExtract('median-cut')}
-            title="Extract 8 colors via median-cut"
+            className="swatch"
+            style={{ background: rgbToHex(c) }}
+            title={rgbToHex(c)}
           >
-            Extract · median-cut
+            <input
+              type="color"
+              value={rgbToHex(c)}
+              onChange={(e) => {
+                const next = [...activeColors];
+                next[i] = hexToRgb(e.target.value);
+                ensureCustom(next);
+              }}
+            />
           </button>
-          <button
-            type="button"
-            className="btn btn-block"
-            onClick={() => onExtract('k-means')}
-            title="Extract 8 colors via k-means"
-          >
-            Extract · k-means
-          </button>
-        </div>
-        <div className="row">
-          <button
-            type="button"
-            className="btn btn-block"
-            onClick={() =>
-              downloadJson(
-                exportPaletteJson({ ...working, colors: activeColors }),
-                'palette.json'
-              )
-            }
-          >
-            Export JSON
-          </button>
-          <button
-            type="button"
-            className="btn btn-block"
-            onClick={() => {
-              const input = document.createElement('input');
-              input.type = 'file';
-              input.accept = 'application/json,.json';
-              input.onchange = async () => {
-                const file = input.files?.[0];
-                if (!file) return;
-                const text = await file.text();
-                onCustomChange(importPaletteJson(text));
-              };
-              input.click();
-            }}
-          >
-            Import JSON
-          </button>
-        </div>
+        ))}
+        <button
+          type="button"
+          className="swatch swatch-add"
+          onClick={() => ensureCustom([...activeColors, [157, 129, 225]])}
+          title="Add swatch"
+        >
+          +
+        </button>
       </div>
-    </section>
+
+      <div className="row">
+        <button
+          type="button"
+          className="btn btn-block"
+          onClick={() => onExtract('median-cut')}
+          title="Extract 8 colors via median-cut"
+        >
+          Extract · median-cut
+        </button>
+        <button
+          type="button"
+          className="btn btn-block"
+          onClick={() => onExtract('k-means')}
+          title="Extract 8 colors via k-means"
+        >
+          Extract · k-means
+        </button>
+      </div>
+      <div className="row">
+        <button
+          type="button"
+          className="btn btn-block"
+          onClick={() =>
+            downloadJson(
+              exportPaletteJson({ ...working, colors: activeColors }),
+              'palette.json'
+            )
+          }
+        >
+          Export JSON
+        </button>
+        <button
+          type="button"
+          className="btn btn-block"
+          onClick={() => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/json,.json';
+            input.onchange = async () => {
+              const file = input.files?.[0];
+              if (!file) return;
+              const text = await file.text();
+              onCustomChange(importPaletteJson(text));
+            };
+            input.click();
+          }}
+        >
+          Import JSON
+        </button>
+      </div>
+    </Section>
   );
 }

@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -79,4 +79,15 @@ for (const [name, b64] of Object.entries(whole)) {
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, buf);
   console.log('wrote', name, buf.length, 'bytes');
+}
+// Alias lockup as the default sample canvas image
+try {
+  const lockup = join(pub, 'logo-lockup.png');
+  const sample = join(pub, 'dithyr-logo.png');
+  if (existsSync(lockup)) {
+    writeFileSync(sample, readFileSync(lockup));
+    console.log('wrote dithyr-logo.png (alias of logo-lockup.png)');
+  }
+} catch (e) {
+  console.warn('dithyr-logo alias skipped', e);
 }
